@@ -1,0 +1,83 @@
+%{
+#include <stdlib.h>
+int rowNumber = 1;
+int stringRow = 1;
+int floatpointFlag = 0;
+int stillVariable = 1;
+%}
+
+%x qMark
+%x qString
+
+
+IDENTIFIER	[_A-Za-z][_A-Za-z0-9]*
+STRING		[^']*
+%%
+
+
+
+\" BEGIN(qMark); stillVariable=1;
+\' BEGIN(qString); stringRow = rowNumber;
+
+<INITIAL,qMark>\n rowNumber++; BEGIN(INITIAL);
+
+<*>(-?([0-9]+)(\.0+)) floatpointFlag = 1; stillVariable=0; REJECT;
+<*>(-?([0-9]+)(\.[0-9]+)?) printf("%d tNUM (", rowNumber); ECHO; printf(") ("); printf("%g", atof(yytext)); if(floatpointFlag) {printf(".0"); floatpointFlag = 0;}; printf(")\n"); stillVariable =0;
+
+<qMark>"Set" printf("%d tSET\n", rowNumber);
+<qMark>"Get" printf("%d tGET\n", rowNumber);
+<qMark>"Function" printf("%d tFUNCTION\n", rowNumber);
+<qMark>"Print" printf("%d tPRINT\n", rowNumber);
+<qMark>"For" printf("%d tFOR\n", rowNumber);
+<qMark>"If" printf("%d tIF\n", rowNumber);
+<qMark>"Return" printf("%d tRETURN\n", rowNumber);
+
+
+<qMark>"++" printf("%d tINC\n", rowNumber);
+<qMark>"--" printf("%d tDEC\n", rowNumber);
+<qMark>"*" printf("%d tMUL\n", rowNumber);
+<qMark>"/" printf("%d tDIV\n", rowNumber);
+<qMark>"+" printf("%d tPLUS\n", rowNumber);
+<qMark>"-" printf("%d tMINUS\n", rowNumber);
+<qMark>">=" printf("%d tGEQ\n", rowNumber);
+<qMark>"<="  printf("%d tLEQ\n", rowNumber);
+<qMark>">" printf("%d tGT\n", rowNumber);
+<qMark>"<" printf("%d tLT\n", rowNumber);
+
+<qMark>"==" printf("%d tEQUALITY\n", rowNumber);
+
+
+<*>"[" printf("%d tLBRAC\n", rowNumber);
+<*>"]" printf("%d tRBRAC\n", rowNumber);
+<*>, printf("%d tCOMMA\n", rowNumber);
+<*>" " 
+
+
+<qString>{STRING} {
+		printf("%d tSTRING (", stringRow); 
+		ECHO; 
+		printf(")\n");
+		int i=0;
+		while(i < yyleng && yytext[i] != EOF) {
+			if(yytext[i] == '\n') {
+				rowNumber++;
+			}
+			i++;
+		}
+	}
+<qMark>{IDENTIFIER} if(stillVariable) {printf("%d tIDENT (", rowNumber); ECHO; printf(")\n");}
+
+
+<qMark>\" BEGIN(INITIAL);
+<qString>\' BEGIN(INITIAL);
+
+
+<*>.
+  
+%%
+int main()
+{
+	yylex();
+	return(0);
+}
+
